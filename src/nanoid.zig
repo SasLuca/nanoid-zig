@@ -31,10 +31,10 @@ pub const alphabets = struct
 
     /// URL friendly characters used by the default generate procedure.
     pub const default = "_-" ++ alphanumeric;
-};
 
-/// An array of all the alphabets.
-pub const all_alphabets = internal_utils.collectAllConstantsInStruct(alphabets, []const u8);
+    /// An array of all the alphabets.
+    pub const all = [_][]const u8 { numbers, hexadecimal_lowercase, hexadecimal_uppercase, lowercase, uppercase, no_look_alikes, no_look_alikes_safe, alphanumeric, default, };
+};
 
 /// The default length for nanoids.
 pub const default_id_len = 21;
@@ -60,7 +60,7 @@ pub fn computeMask(alphabet_len: u8) u8
 
     const clz: u5 = @clz(@as(u31, (alphabet_len - 1) | 1));
     const mask = (@as(u32, 2) << (31 - clz)) - 1;
-    const result = @truncate(u8, mask);
+    const result: u8 = @truncate(mask);
     return result;
 }
 
@@ -81,11 +81,12 @@ pub fn computeRngStepBufferLength(id_len: usize, alphabet_len: u8) usize
     // The number of random bytes gets decided upon the ID length, mask,
     // alphabet length, and magic number 1.6 (using 1.6 peaks at performance
     // according to benchmarks)."
-    const mask_f = @intToFloat(f64, computeMask(alphabet_len));
-    const id_len_f = @intToFloat(f64, id_len);
-    const alphabet_size_f = @intToFloat(f64, alphabet_len);
-    const step_buffer_len = @ceil(1.6 * mask_f * id_len_f / alphabet_size_f);
-    const result = @floatToInt(usize, step_buffer_len);
+
+    const id_len_f: f64 = @as(f64, @floatFromInt(id_len));
+    const mask_f: f64 = @as(f64, @floatFromInt(computeMask(alphabet_len)));
+    const alphabet_len_f: f64 = @as(f64, @floatFromInt(alphabet_len));
+    const step_buffer_len: f64 = @ceil(1.6 * mask_f * id_len_f / alphabet_len_f);
+    const result = @as(usize, @intFromFloat(step_buffer_len));
     
     return result;
 }
@@ -102,7 +103,7 @@ pub fn computeSufficientRngStepBufferLengthFor(max_id_len: usize) usize
     var i: u9 = 1;
     while (i <= max_alphabet_len) : (i += 1)
     {
-        const alphabet_len = @truncate(u8, i);
+        const alphabet_len: u8 = @truncate(i);
         const step_buffer_len = computeRngStepBufferLength(max_id_len, alphabet_len);
 
         if (step_buffer_len > max_step_buffer_len)
@@ -118,7 +119,7 @@ pub fn computeSufficientRngStepBufferLengthFor(max_id_len: usize) usize
 ///
 /// Parameters:
 /// - `rng`: a random number generator. 
-///    Provide a secure one such as `std.rand.DefaultCsprng` and seed it properly if you have security concerns. 
+///    Provide a secure one such as `std.Random.DefaultCsprng` and seed it properly if you have security concerns. 
 ///    See `Regarding RNGs` in `readme.md` for more information.
 ///
 /// - `alphabet`: an array of the bytes that will be used in the id, its length must be in the range `(0, max_alphabet_len]`.
@@ -128,12 +129,12 @@ pub fn computeSufficientRngStepBufferLengthFor(max_id_len: usize) usize
 ///    length `result_buffer.len`. This buffer will be returned at the end of the function.
 ///
 /// - `step_buffer`: The buffer will be filled with random bytes using `rng.bytes()`.
-///    Must be at least `computeRngStepBufferLength(computeMask(@truncate(u8, alphabet.len)), result_buffer.len, alphabet.len)` bytes.
-pub fn generateEx(rng: std.rand.Random, alphabet: []const u8, result_buffer: []u8, step_buffer: []u8) []u8
+///    Must be at least `computeRngStepBufferLength(computeMask(@truncate(alphabet.len)), result_buffer.len, alphabet.len)` bytes.
+pub fn generateEx(rng: std.Random, alphabet: []const u8, result_buffer: []u8, step_buffer: []u8) []u8
 {
     std.debug.assert(alphabet.len > 0 and alphabet.len <= max_alphabet_len);        
 
-    const alphabet_len = @truncate(u8, alphabet.len);
+    const alphabet_len: u8 = @truncate(alphabet.len);
     const mask = computeMask(alphabet_len);
     const necessary_step_buffer_len = computeRngStepBufferLength(result_buffer.len, alphabet_len);
     const actual_step_buffer = step_buffer[0..necessary_step_buffer_len];
@@ -174,7 +175,7 @@ pub fn generateEx(rng: std.rand.Random, alphabet: []const u8, result_buffer: []u
 ///
 /// Parameters:
 /// - `rng`: a random number generator. 
-///    Provide a secure one such as `std.rand.DefaultCsprng` and seed it properly if you have security concerns. 
+///    Provide a secure one such as `std.Random.DefaultCsprng` and seed it properly if you have security concerns. 
 ///    See `Regarding RNGs` in `readme.md` for more information.
 ///
 /// - `alphabet`: an array of the bytes that will be used in the id, its length must be in the range `(0, max_alphabet_len]`.
@@ -182,12 +183,12 @@ pub fn generateEx(rng: std.rand.Random, alphabet: []const u8, result_buffer: []u
 ///
 /// - `result_buffer` is an output buffer that will be filled *completely* with random bytes from `alphabet`, thus generating an id of 
 ///    length `result_buffer.len`. This buffer will be returned at the end of the function.
-pub fn generateExWithIterativeRng(rng: std.rand.Random, alphabet: []const u8, result_buffer: []u8) []u8
+pub fn generateExWithIterativeRng(rng: std.Random, alphabet: []const u8, result_buffer: []u8) []u8
 {
     std.debug.assert(result_buffer.len > 0);
     std.debug.assert(alphabet.len > 0 and alphabet.len <= max_alphabet_len);
 
-    const alphabet_len = @truncate(u8, alphabet.len);
+    const alphabet_len: u8 = @truncate(alphabet.len);
     const mask = computeMask(alphabet_len);
 
     var result_iter: usize = 0;
@@ -222,11 +223,11 @@ pub fn generateExWithIterativeRng(rng: std.rand.Random, alphabet: []const u8, re
 /// Parameters:
 ///
 /// - `rng`: a random number generator. 
-///    Provide a secure one such as `std.rand.DefaultCsprng` and seed it properly if you have security concerns. 
+///    Provide a secure one such as `std.Random.DefaultCsprng` and seed it properly if you have security concerns. 
 ///    See `Regarding RNGs` in `README.md` for more information.
 ///
 /// - `alphabet`: an array of the bytes that will be used in the id, its length must be in the range `(0, max_alphabet_len]`.
-pub fn generateWithAlphabet(rng: std.rand.Random, alphabet: []const u8) [default_id_len]u8
+pub fn generateWithAlphabet(rng: std.Random, alphabet: []const u8) [default_id_len]u8
 {
     var nanoid: [default_id_len]u8 = undefined;
     var step_buffer: [rng_step_buffer_len_sufficient_for_default_length_ids]u8 = undefined;
@@ -239,9 +240,9 @@ pub fn generateWithAlphabet(rng: std.rand.Random, alphabet: []const u8) [default
 /// Parameters:
 ///
 /// - `rng`: a random number generator. 
-///    Provide a secure one such as `std.rand.DefaultCsprng` and seed it properly if you have security concerns. 
+///    Provide a secure one such as `std.Random.DefaultCsprng` and seed it properly if you have security concerns. 
 ///    See `Regarding RNGs` in `README.md` for more information.
-pub fn generate(rng: std.rand.Random) [default_id_len]u8
+pub fn generate(rng: std.Random) [default_id_len]u8
 {
     const result = generateWithAlphabet(rng, alphabets.default);
     return result;
@@ -250,38 +251,38 @@ pub fn generate(rng: std.rand.Random) [default_id_len]u8
 /// Non public utility functions used mostly in unit tests.
 const internal_utils = struct 
 {
-    fn makeDefaultCsprng() std.rand.DefaultCsprng 
+    fn makeDefaultCsprng() std.Random.DefaultCsprng 
     {
         // Generate seed
-        var seed: [std.rand.DefaultCsprng.secret_seed_length]u8 = undefined;
+        var seed: [std.Random.DefaultCsprng.secret_seed_length]u8 = undefined;
         std.crypto.random.bytes(&seed);
 
         // Initialize the rng and allocator
-        var rng = std.rand.DefaultCsprng.init(seed);
+        const rng = std.Random.DefaultCsprng.init(seed);
         return rng;
     }
 
-    fn makeDefaultPrngWithConstantSeed() std.rand.DefaultPrng
+    fn makeDefaultPrngWithConstantSeed() std.Random.DefaultPrng
     {
-        var rng = std.rand.DefaultPrng.init(0);
+        const rng = std.Random.DefaultPrng.init(0);
         return rng;
     }
 
-    fn makeDefaultCsprngWithConstantSeed() std.rand.DefaultCsprng
+    fn makeDefaultCsprngWithConstantSeed() std.Random.DefaultCsprng
     {
         // Generate seed
-        var seed: [std.rand.DefaultCsprng.secret_seed_length]u8 = undefined;
+        const seed: [std.Random.DefaultCsprng.secret_seed_length]u8 = undefined;
         for (seed) |*it| it.* = 'a';
 
         // Initialize the rng and allocator
-        var rng = std.rand.DefaultCsprng.init(seed);
+        const rng = std.Random.DefaultCsprng.init(seed);
         return rng;
     }
 
     /// Taken from https://github.com/codeyu/nanoid-net/blob/445f4d363e0079e151ea414dab1a9f9961679e7e/test/Nanoid.Test/NanoidTest.cs#L145
     fn toBeCloseTo(actual: f64, expected: f64, precision: f64) bool
     {
-        const pass = @fabs(expected - actual) < std.math.pow(f64, 10, -precision) / 2;
+        const pass = @abs(expected - actual) < std.math.pow(f64, 10, -precision) / 2;
         return pass;
     }
 
@@ -298,24 +299,6 @@ const internal_utils = struct
 
         return true;
     }
-
-    /// Returns an array with all the public constants from a struct.
-    fn collectAllConstantsInStruct(comptime namespace: type, comptime T: type) []const T 
-    {
-        var result: []const T = &.{};
-        for (@typeInfo(namespace).Struct.decls) |decl|
-        {
-            if (!decl.is_pub) continue;
-
-            const value = @field(namespace, decl.name);
-            
-            if (@TypeOf(value) == T)
-            {
-                result = result ++ [_]T{ value };
-            }
-        }
-        return result;
-    }
 };
 
 test "calling computeMask with all acceptable input"
@@ -323,7 +306,7 @@ test "calling computeMask with all acceptable input"
     var i: u9 = 1;
     while (i <= max_alphabet_len) : (i += 1) 
     {
-        const alphabet_len = @truncate(u8, i);
+        const alphabet_len: u8 = @truncate(i);
         const mask = computeMask(alphabet_len);
         try std.testing.expect(mask > 0);
     }
@@ -334,7 +317,7 @@ test "calling computeRngStepBufferLength with all acceptable alphabet sizes and 
     var i: u9 = 1;
     while (i <= max_alphabet_len) : (i += 1)
     {
-        const alphabet_len = @truncate(u8, i);
+        const alphabet_len: u8 = @truncate(i);
         const rng_step_size = computeRngStepBufferLength(default_id_len, alphabet_len);
         try std.testing.expect(rng_step_size > 0);
     }
@@ -383,7 +366,7 @@ test "generating an id for all alphabets"
 {
     var rng = internal_utils.makeDefaultCsprng();
     
-    for (all_alphabets) |alphabet|
+    for (alphabets.all) |alphabet|
     {
         const result = generateWithAlphabet(rng.random(), alphabet);
 
@@ -448,7 +431,7 @@ test "flat distribution of generated ids"
         // Count the occurence of every character across all generated ids
         for (id) |char|
         {
-            var char_count = characters_counts.getPtr(char);
+            const char_count = characters_counts.getPtr(char);
             if (char_count) |c|
             {
                 c.* += 1;
@@ -462,10 +445,10 @@ test "flat distribution of generated ids"
 
     for (characters_counts.values()) |value|
     {
-        const value_f = @intToFloat(f64, value);
-        const alphabet_len_f = @intToFloat(f64, alphabets.default.len);
-        const count_f = @intToFloat(f64, number_of_ids_to_generate);
-        const id_len_f = @intToFloat(f64, default_id_len);
+        const value_f: f64 = @as(f64, @floatFromInt(value));
+        const alphabet_len_f: f64 = alphabets.default.len;
+        const count_f: f64 = number_of_ids_to_generate;
+        const id_len_f: f64 = default_id_len;
         const distribution = value_f * alphabet_len_f / (count_f * id_len_f);
         try std.testing.expect(internal_utils.toBeCloseTo(distribution, 1, 1));
     }
@@ -494,7 +477,7 @@ test "flat distribution of generated ids with the iterative method"
         // Count the occurence of every character across all generated ids
         for (id) |char|
         {
-            var char_count = characters_counts.getPtr(char);
+            const char_count = characters_counts.getPtr(char);
             if (char_count) |c|
             {
                 c.* += 1;
@@ -508,10 +491,10 @@ test "flat distribution of generated ids with the iterative method"
 
     for (characters_counts.values()) |value|
     {
-        const value_f = @intToFloat(f64, value);
-        const alphabet_len_f = @intToFloat(f64, alphabets.default.len);
-        const count_f = @intToFloat(f64, number_of_ids_to_generate);
-        const id_len_f = @intToFloat(f64, default_id_len);
+        const value_f: f64 = @as(f64, @floatFromInt(value));
+        const alphabet_len_f: f64 = alphabets.default.len;
+        const count_f: f64 = number_of_ids_to_generate;
+        const id_len_f: f64 = default_id_len;
         const distribution = value_f * alphabet_len_f / (count_f * id_len_f);
         try std.testing.expect(internal_utils.toBeCloseTo(distribution, 1, 1));
     }

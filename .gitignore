@@ -1,5 +1,6 @@
 # Taken from: https://github.com/ziglang/zig/blob/master/.gitignore
 
+.zig-cache/
 zig-cache/
 zig-out/
 /release/
